@@ -6,11 +6,6 @@ spec:
   group: "example.martin-helmich.de"
   version: "v1alpha1"
   scope: "Namespaced"
-  env:
-    - name: KUBERNETES_SERVICE_HOST
-      value: "kubernetes.default.svc.cluster.local"
-    - name: KUBERNETES_SERVICE_PORT
-      value: "443"
   names:
     plural: "projects"
     singular: "project"
