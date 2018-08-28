@@ -1,43 +1,52 @@
-package v1alpha1
+package main
 
 import (
+	"flag"
+	"fmt"
+	"log"
+
 	"github.com/jesseokeya/kubernetes-go-client/api/types/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
+	clientV1alpha1 "github.com/jesseokeya/kubernetes-go-client/clientset/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
-// ExampleV1Alpha1Interface is an example interface
-type ExampleV1Alpha1Interface interface {
-	Projects(namespace string) ProjectInterface
+var kubeconfig string
+
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
+	flag.Parse()
 }
 
-// ExampleV1Alpha1Client is an example client
-type ExampleV1Alpha1Client struct {
-	restClient rest.Interface
-}
+func main() {
+	var config *rest.Config
+	var err error
 
-// NewForConfig initializes client
-func NewForConfig(c *rest.Config) (*ExampleV1Alpha1Client, error) {
-	config := *c
-	config.ContentConfig.GroupVersion = &schema.GroupVersion{Group: v1alpha1.GroupName, Version: v1alpha1.GroupVersion}
-	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
-	config.UserAgent = rest.DefaultKubernetesUserAgent()
+	if kubeconfig == "" {
+		log.Printf("using in-cluster configuration")
+		config, err = rest.InClusterConfig()
+	} else {
+		log.Printf("using configuration from '%s'", kubeconfig)
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
 
-	client, err := rest.RESTClientFor(&config)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return &ExampleV1Alpha1Client{restClient: client}, nil
-}
+	v1alpha1.AddToScheme(scheme.Scheme)
 
-// Projects initalizes ProjectInterface
-func (c *ExampleV1Alpha1Client) Projects(namespace string) ProjectInterface {
-	return &projectClient{
-		restClient: c.restClient,
-		ns:         namespace,
+	clientSet, err := clientV1alpha1.NewForConfig(config)
+	if err != nil {
+		panic(err)
 	}
+
+	projects, err := clientSet.Projects("default").List(metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("projects found: %+v\n", projects)
 }
