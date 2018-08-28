@@ -1,7 +1,43 @@
-package main
+package v1alpha1
 
-var kubeconfig string
+import (
+	"github.com/jesseokeya/kubernetes-go-client/api/types/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
+)
 
-func main() {
-	var config *res
+// ExampleV1Alpha1Interface is an example interface
+type ExampleV1Alpha1Interface interface {
+	Projects(namespace string) ProjectInterface
+}
+
+// ExampleV1Alpha1Client is an example client
+type ExampleV1Alpha1Client struct {
+	restClient rest.Interface
+}
+
+// NewForConfig initializes client
+func NewForConfig(c *rest.Config) (*ExampleV1Alpha1Client, error) {
+	config := *c
+	config.ContentConfig.GroupVersion = &schema.GroupVersion{Group: v1alpha1.GroupName, Version: v1alpha1.GroupVersion}
+	config.APIPath = "/apis"
+	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	config.UserAgent = rest.DefaultKubernetesUserAgent()
+
+	client, err := rest.RESTClientFor(&config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExampleV1Alpha1Client{restClient: client}, nil
+}
+
+// Projects initalizes ProjectInterface
+func (c *ExampleV1Alpha1Client) Projects(namespace string) ProjectInterface {
+	return &projectClient{
+		restClient: c.restClient,
+		ns:         namespace,
+	}
 }
